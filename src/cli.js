@@ -222,6 +222,11 @@ let commands = {
         type: Boolean,
         description: 'Disable autoprefixer',
       },
+      '--ignore-stdin': {
+        type: Boolean,
+        description:
+          'Disable stdin listeners. Only use in combination with --watch flag.\n\t\t\t    For use when running tailwindcss cli as a child process without connection to parent stdin',
+      },
       '-c': '--config',
       '-i': '--input',
       '-o': '--output',
@@ -418,6 +423,7 @@ async function build() {
   let shouldPoll = args['--poll']
   let shouldCoalesceWriteEvents = shouldPoll || process.platform === 'win32'
   let includePostCss = args['--postcss']
+  let ignoreStdIn = args['--ignore-stdin'] || false
 
   // Polling interval in milliseconds
   // Used only when polling or coalescing add/change events on Windows
@@ -885,9 +891,11 @@ async function build() {
   }
 
   if (shouldWatch) {
-    /* Abort the watcher if stdin is closed to avoid zombie processes */
-    process.stdin.on('end', () => process.exit(0))
-    process.stdin.resume()
+    if (!ignoreStdIn) {
+      /* Abort the watcher if stdin is closed to avoid zombie processes */
+      process.stdin.on('end', () => process.exit(0))
+      process.stdin.resume()
+    }
     startWatcher()
   } else {
     buildOnce()
